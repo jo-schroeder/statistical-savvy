@@ -15,14 +15,14 @@ responses <- r1 %>% left_join(r2, by = "Screen.name")
 
 img0 <- responses %>% 
   ggplot(aes(x = Response.x, y = Response.y)) +
-  geom_point(aes(alpha = 0)) +
+  geom_point(alpha = 0) +
   xlab("Number of cups of caffiene") + 
   ylab("Number of emails") +
   theme_minimal() +
   theme(legend.position = "none") +
   ggtitle("Is there a relationship between the number of cups of \ncaffiene and number of emails sent?") 
 png("img0.png")
-print(img1)
+print(img0)
 dev.off() 
 
 img1 <- responses %>% 
