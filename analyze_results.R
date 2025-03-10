@@ -3,15 +3,22 @@ setwd("/Users/schroejh/Documents/git/statistical-savvy/")
 library(tidyverse)
 library(ggpmisc)
 
-coffee <- read.csv("/Users/schroejh/Downloads/how-many-cups-of-a-caffeinated-results.csv")
-emails <- read.csv("/Users/schroejh/Downloads/how-many-emails-have-you-sent-today-results.csv")
+colnames <- c("Response","Via","Screen name","Registered participant","Created At") 
 
-r1 <- coffee %>% select(Response, Screen.name) %>% 
-  mutate(type = "coffee")
-r2 <- emails %>% select(Response, Screen.name) %>% 
-  mutate(type = "emails")
+results <- read_csv("/Users/schroejh/Downloads/placeholder_results.csv") %>%
+  filter(!is.na(placeholder)) %>%
+  separate(col = placeholder, into = colnames, sep = ",") 
 
-responses <- r1 %>% left_join(r2, by = "Screen.name")
+results <- data.frame(t(apply(results, 1, zoo::na.locf)))
+
+results <- results %>% select(Response, Screen.name) %>%
+  mutate(question = str_extract(Response, "[^_]+\\?|[^_]+\\...")) %>%
+  fill(question, .direction = "down") %>%
+  filter(Response != "Response",
+         Response != question)
+  
+# create some synthetic observations
+# code up the analysis of these things
 
 img0 <- responses %>% 
   ggplot(aes(x = Response.x, y = Response.y)) +

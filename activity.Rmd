@@ -1,0 +1,300 @@
+---
+title: "Statistical Savvy for Librarians: Activity"
+output: slidy_presentation
+date: "2025-03-12"
+---
+
+```{r setup, include=FALSE}
+#setwd("/Users/schroejh/Documents/git/statistical-savvy/")
+
+set.seed(2025)
+
+library(tidyverse)
+library(ggpmisc)
+library(magrittr)
+library(smplot2)
+library(ggpubr)
+
+colnames <- c("Response","Via","Screen name","Registered participant","Created At") 
+
+results <- read_csv("/Users/schroejh/Downloads/placeholder_results.csv") %>%
+  filter(!is.na(placeholder)) %>%
+  separate(col = placeholder, into = colnames, sep = ",") 
+
+results <- data.frame(t(apply(results, 1, zoo::na.locf)))
+
+results <- results %>% select(Response, Screen.name) %>%
+  mutate(question = str_extract(Response, "[^_]+\\?|[^_]+\\...")) %>%
+  fill(question, .direction = "down") %>%
+  filter(Response != "Response",
+         Response != question) %>%
+  mutate(type = "real")
+
+question_text <- c("How many cups of a caffeinated beverage have you had today?",
+               "How many emails have you sent so far today?",
+               "What's your favorite season?",
+               "What's the best movie genre?",
+               "Are you a...",
+               "What's your salsa preference?")
+col3_responses <- c("winter", "spring", "summer", "fall")
+col4_responses <- c("romance", "comedy", "scary", "action", "sci-fi")
+col5_responses <- c("dreamer", "doer")
+col6_responses <- c("mild", "medium", "spicy")
+
+# synthetic data
+col1 <- c(round(runif(20, min = 0, max = 5)))
+col2 <- c(round(rnorm(20, mean = 5, sd = 1)))
+col3 <- sample(col3_responses, 20, replace=TRUE, prob=c(0.25, 0.25, 0.25, 0.25))
+col4 <- sample(col4_responses, 20, replace=TRUE, prob=c(0.2, 0.2, 0.2, 0.2, 0.2))
+col5 <- sample(col5_responses, 20, replace=TRUE, prob=c(0.5, 0.5))
+col6 <- sample(col6_responses, 20, replace=TRUE, prob=c(0.25, 0.5, 0.25))
+Response <- c(col1, col2, col3, col4, col5, col6)
+Screen.name <- c(paste0("rando", rep(1:20)))
+question <- c(rep(question_text[1], 20), rep(question_text[2], 20),
+              rep(question_text[3], 20), rep(question_text[4], 20),
+              rep(question_text[5], 20), rep(question_text[6], 20))
+synthetic_responses <- cbind(Response, Screen.name, question) %>%  
+  as.data.frame() %>%
+  mutate(type = "synthetic")
+
+
+results <- rbind(results, synthetic_responses)
+
+```
+
+## Descriptive statistics
+
+**Descriptive statistics** summarize a dataset, commonly through measures of central tendency or spread
+
+Examples: mean, median, mode, range, standard deviation
+
+Descriptive statistics are usually used to set the stage for an analysis. You might use them to
+
+-   describe a population
+-   characterize a phenomenon
+
+------------------------------------------------------------------------
+
+::: {.left style="float:left;width:38%"}
+**Example: The Five Number Summary**
+
+The **five number summary** is commonly used to provide a basic description on a dataset. It usually contains
+
+-   The minimum value
+-   The lower quartile
+-   The median
+-   The upper quartile
+-   The maximum value
+
+**Note:** A five number summary can only be computed for quantitative variables (but qualitative variables can still be described statistically!)
+:::
+
+::: {.right style="float:right;width:58%"}
+```{r, echo = FALSE,comment = ''}
+n_responders <- results %>% filter(type == "real") %>% distinct(Screen.name) %>%
+  count() %>% pull(n)
+n_responders_complete <- results %>% filter(type == "real") %>% count(Screen.name) %>% filter(n < 6) %>% nrow()
+
+question1 <- results %>% 
+  filter(type == "real") %>% 
+  filter(question == question_text[1]) %>%
+  pull(Response) %>% as.numeric()
+
+question2 <- results %>% 
+  filter(type == "real") %>% 
+  filter(question == question_text[2]) %>%
+  pull(Response) %>% as.numeric()
+
+question3 <- results %>% 
+  filter(type == "real") %>% 
+  filter(question == question_text[3]) %>%
+  pull(Response)
+freq_table <- table(question3)
+percent <- round(prop.table(freq_table), 2) * 100
+dt <- cbind(freq_table , percent) %>% set_colnames(c("Count", "Percent (%)"))
+
+```
+
+**Summary of Survey Responses**
+
+`r n_responders` people responded
+
+`r n_responders_complete` people didn't answer every question `r emo::ji("face")`
+
+`r question_text[1]`
+
+```{r, echo = FALSE, comment = ''}
+summary(question1)
+```
+
+`r question_text[2]`
+
+```{r, echo = FALSE, comment = ''}
+summary(question2)
+```
+
+`r question_text[3]`
+
+```{r, echo = FALSE, comment = ''}
+dt
+```
+:::
+
+------------------------------------------------------------------------
+
+## Descriptive statistics
+
+-   Sometimes descriptive statistics are all that's needed
+-   Descriptive statistics can hide important patterns in a dataset
+    -   Exploratory data visualization is always encouraged!
+
+        ![](Datasaurus%20Dozen%20-%20Imgur.gif)
+
+Datasaurus Dozen GIF: Matejka, J., & Fitzmaurice, G, 2017; Based on Anscombe, 1973
+
+------------------------------------------------------------------------
+
+## Inferential Statistics
+
+**Inferential statistics** allow us to draw conclusions based on a dataset based on **probability theory**
+
+Examples: T test, Chi-squared test, ANOVA, regression
+
+Inferential statistics are usually used to test a hypothesis, for example
+
+-   Estimate a characteristic of a population using characteristics of a subset of the population
+
+-   Understand connections between variables
+
+-   Forecast future outcomes based on historical data
+
+------------------------------------------------------------------------
+
+::: {.left style="float:left;width:38%"}
+**Example: Correlation**
+
+A **correlation** describes the relationship between two variables
+
+-   "Correlation does not equal causation"
+
+There are many methods of calculate correlation coefficient, but generally
+
+-   correlation ranges between 0 and 1 (1 means perfect relationship)
+-   the sign of the coefficient (positive or negative) is the direction of the relationship
+:::
+
+::: {.right style="float:right;width:58%"}
+```{r, echo = FALSE, comment = '', warning = FALSE}
+scatter <- results %>% 
+  #filter
+  pivot_wider(names_from = question, values_from = Response) %>%
+  select(3, 4, 8)
+scatter$`How many cups of a caffeinated beverage have you had today?` <- as.numeric(scatter$`How many cups of a caffeinated beverage have you had today?`)
+scatter$`How many emails have you sent so far today?` <- as.numeric(scatter$`How many emails have you sent so far today?`)
+
+ggscatter(scatter, 
+            x = "How many cups of a caffeinated beverage have you had today?", 
+            y = "How many emails have you sent so far today?",
+   title = "Is there a relationship between caffeine consumption and productivity?",
+  ggtheme = theme_minimal())
+
+ggscatter(scatter, 
+            x = "How many cups of a caffeinated beverage have you had today?", 
+            y = "How many emails have you sent so far today?",
+   add = "reg.line",  add.params = list(color = "dark green"),
+   title = "Is there a relationship between caffeine consumption and productivity?",
+  ggtheme = theme_minimal()) +
+  stat_cor(aes(label = ..r.label..), color = "dark green")
+
+scatter %>% 
+  ggplot(aes(x = `How many cups of a caffeinated beverage have you had today?`, y = `What's your salsa preference?`)) +
+  geom_point(alpha = 1) +
+  xlab("Number of cups of caffeine") + 
+  ylab("Salsa preference") +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  ggtitle("Is there a relationship between caffeine consumption\n and spice tolerance?") +
+  scale_y_discrete(limits=c("mild", "medium", "spicy"))
+
+```
+:::
+
+------------------------------------------------------------------------
+
+## Statistical Significance
+
+**Statistical significance** demonstrates the degree to which a result can be attributed to random chance
+
+Low P value (0.5, 0.1) means low likelihood results are due to random chance alone
+
+------------------------------------------------------------------------
+
+::: {.left style="float:left;width:38%"}
+**Example: Regression**
+
+**Regression analysis** is a family of methods to characterize the relationship between an outcome of interest and explanatory variables
+
+\- **Most common regression method is linear regression**
+
+Rules of thumb for explanatory variables
+
+-   Regression requires quantitative (numeric) inputs, but qualitative (categorical) inputs can be coded
+
+    -   "Dummy" variables
+
+-   Too many explanatory variables hurts model performance
+
+-   Explanatory variables should not be correlated
+:::
+
+::: {.right style="float:right;width:58%"}
+```{r, echo = FALSE}
+scatter %>% 
+  ggplot(aes(x = as.numeric(`How many cups of a caffeinated beverage have you had today?`), y = as.numeric(`How many emails have you sent so far today?`))) +
+  geom_point() +
+  xlab("Number of cups of caffeine") + 
+  ylab("Number of emails") +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  ggtitle("Is there a relationship between caffeine consumption and productivity?") + 
+  stat_poly_line(color = "dark green", se = FALSE) +
+  stat_poly_eq(aes(label =  paste(after_stat(eq.label), "*\" with \"*", 
+                                  after_stat(p.value.label), "*\"\"",
+                                  sep = "")), size = 5, color = "dark green")
+```
+:::
+
+------------------------------------------------------------------------
+
+::: {.left style="float:left;width:38%"}
+**Example: chi-squared test**
+
+A **chi-squared** test is used to analyze if two categorical variables are related
+-   Also called a chi-squared test of independence
+
+The intuition is to see if actual frequencies match up with expected frequencies
+
+:::
+
+::: {.right style="float:right;width:58%"}
+**Is there a relationship between personality and movie preferences?**
+
+```{r, echo = FALSE,comment = '', warning = FALSE}
+chi_results <- dplyr::filter(results, question == "Are you a..." | question == "What's the best movie genre?") %>% pivot_wider(names_from = question, values_from = Response)
+
+table(chi_results$`What's the best movie genre?`, chi_results$`Are you a...`)
+table <- table(chi_results$`What's the best movie genre?`, chi_results$`Are you a...`)
+print(chisq.test(table))
+```
+:::
+
+------------------------------------------------------------------------
+
+## Statistical significance
+
+-   No statistical significance does not mean ‘bad’ results
+    -   Methodological or data concerns?
+    -   What is interesting about theory not matching up with analysis?
+-   Statistical significance does not necessarily mean real-world significance
+
+------------------------------------------------------------------------
