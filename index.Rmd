@@ -17,9 +17,13 @@ library(ggpubr)
 
 colnames <- c("Response","Via","Screen name","Registered participant","Created At") 
 
-results <- read_csv("/Users/schroejh/Downloads/placeholder_results.csv") %>%
-  filter(!is.na(placeholder)) %>%
-  separate(col = placeholder, into = colnames, sep = ",") 
+results <- read_csv("/Users/schroejh/Downloads/Statistics Activity_results.csv") 
+
+colnames(results) <- colnames
+
+results <- results %>%
+  filter(!is.na(Response)) #%>%
+  #separate(col = `Statistics Activity`, into = colnames, sep = ",") 
 
 results <- data.frame(t(apply(results, 1, zoo::na.locf)))
 
@@ -75,21 +79,23 @@ Descriptive statistics are usually used to set the stage for an analysis. You mi
 
 ------------------------------------------------------------------------
 
-::: {.left style="float:left;width:38%"}
-**Example: The Five Number Summary**
+```{=html}
+<!---::: {.left style="float:left;width:38%"}
+## Descriptive statistics
 
-The **five number summary** is commonly used to provide a basic description on a dataset. It usually contains
+**Descriptive statistics** summarize a dataset, commonly through measures of central tendency or spread
 
--   The minimum value
--   The lower quartile
--   The median
--   The upper quartile
--   The maximum value
+Examples: mean, median, mode, range, standard deviation
 
-**Note:** A five number summary can only be computed for quantitative variables (but qualitative variables can still be described statistically!)
+Descriptive statistics are usually used to set the stage for an analysis. You might use them to
+
+-   describe a population
+-   characterize a phenomenon
+
 :::
+-->
+```
 
-::: {.right style="float:right;width:58%"}
 ```{r, echo = FALSE,comment = ''}
 n_responders <- results %>% filter(type == "real") %>% distinct(Screen.name) %>%
   count() %>% pull(n)
@@ -138,8 +144,7 @@ summary(question2)
 ```{r, echo = FALSE, comment = ''}
 dt
 ```
-:::
-
+</div>
 ------------------------------------------------------------------------
 
 ## Descriptive statistics
@@ -158,7 +163,7 @@ Datasaurus Dozen GIF: Matejka, J., & Fitzmaurice, G, 2017; Based on Anscombe, 19
 
 **Inferential statistics** allow us to draw conclusions based on a dataset based on **probability theory**
 
-Examples: T test, Chi-squared test, ANOVA, regression
+Examples: Chi-squared test, ANOVA, regression
 
 Inferential statistics are usually used to test a hypothesis, for example
 
@@ -176,15 +181,14 @@ Inferential statistics are usually used to test a hypothesis, for example
 A **correlation** describes the relationship between two variables
 
 -   "Correlation does not equal causation"
-
-There are many methods of calculate correlation coefficient, but generally
-
--   correlation ranges between 0 and 1 (1 means perfect relationship)
--   the sign of the coefficient (positive or negative) is the direction of the relationship
 :::
 
 ::: {.right style="float:right;width:58%"}
 ```{r, echo = FALSE, comment = '', warning = FALSE}
+#There are many methods of calculate correlation coefficient, but generally
+#-   correlation ranges between 0 and 1 (1 means perfect relationship)
+#-   the sign of the coefficient (positive or negative) is the direction of the relationship
+
 scatter <- results %>% 
   #filter
   pivot_wider(names_from = question, values_from = Response) %>%
@@ -192,29 +196,29 @@ scatter <- results %>%
 scatter$`How many cups of a caffeinated beverage have you had today?` <- as.numeric(scatter$`How many cups of a caffeinated beverage have you had today?`)
 scatter$`How many emails have you sent so far today?` <- as.numeric(scatter$`How many emails have you sent so far today?`)
 
-ggscatter(scatter, 
-            x = "How many cups of a caffeinated beverage have you had today?", 
-            y = "How many emails have you sent so far today?",
-   title = "Is there a relationship between caffeine consumption and productivity?",
-  ggtheme = theme_minimal())
+#ggscatter(scatter, 
+#            x = "How many cups of a caffeinated beverage have you had today?", 
+#            y = "How many emails have you sent so far today?",
+#   title = "Is there a relationship between caffeine consumption and productivity?",
+#  ggtheme = theme_minimal())
 
 ggscatter(scatter, 
             x = "How many cups of a caffeinated beverage have you had today?", 
             y = "How many emails have you sent so far today?",
    add = "reg.line",  add.params = list(color = "dark green"),
    title = "Is there a relationship between caffeine consumption and productivity?",
-  ggtheme = theme_minimal()) +
+  ggtheme = theme_minimal(), size = 5) +
   stat_cor(aes(label = ..r.label..), color = "dark green")
 
-scatter %>% 
-  ggplot(aes(x = `How many cups of a caffeinated beverage have you had today?`, y = `What's your salsa preference?`)) +
-  geom_point(alpha = 1) +
-  xlab("Number of cups of caffeine") + 
-  ylab("Salsa preference") +
-  theme_minimal() +
-  theme(legend.position = "none") +
-  ggtitle("Is there a relationship between caffeine consumption\n and spice tolerance?") +
-  scale_y_discrete(limits=c("mild", "medium", "spicy"))
+#scatter %>% 
+#  ggplot(aes(x = `How many cups of a caffeinated beverage have you had today?`, y = `What's your salsa preference?`)) +
+#  geom_point(alpha = 1, size = 5) +
+#  xlab("Number of cups of caffeine") + 
+#  ylab("Salsa preference") +
+#  theme_minimal() +
+#  theme(legend.position = "none") +
+#  ggtitle("Is there a relationship between caffeine consumption\n and spice tolerance?") +
+#  scale_y_discrete(limits=c("mild", "medium", "spicy"))
 
 ```
 :::
@@ -236,22 +240,19 @@ Low P value (0.5, 0.1) means low likelihood results are due to random chance alo
 
 \- **Most common regression method is linear regression**
 
-Rules of thumb for explanatory variables
-
--   Regression requires quantitative (numeric) inputs, but qualitative (categorical) inputs can be coded
-
-    -   "Dummy" variables
-
--   Too many explanatory variables hurts model performance
-
--   Explanatory variables should not be correlated
 :::
 
 ::: {.right style="float:right;width:58%"}
 ```{r, echo = FALSE}
+#Rules of thumb for explanatory variables
+#-   Regression requires quantitative (numeric) inputs, but qualitative (categorical) inputs can be coded
+#    -   "Dummy" variables
+#-   Too many explanatory variables hurts model performance
+#-   Explanatory variables should not be correlated
+
 scatter %>% 
   ggplot(aes(x = as.numeric(`How many cups of a caffeinated beverage have you had today?`), y = as.numeric(`How many emails have you sent so far today?`))) +
-  geom_point() +
+  geom_point(size = 5) +
   xlab("Number of cups of caffeine") + 
   ylab("Number of emails") +
   theme_minimal() +
@@ -267,16 +268,17 @@ scatter %>%
 ------------------------------------------------------------------------
 
 ::: {.left style="float:left;width:38%"}
+
 **Example: chi-squared test**
 
-A **chi-squared** test is used to analyze if two categorical variables are related
--   Also called a chi-squared test of independence
+A **chi-squared** test is used to analyze if two categorical variables are related - Also called a chi-squared test of independence
 
 The intuition is to see if actual frequencies match up with expected frequencies
 
 :::
 
 ::: {.right style="float:right;width:58%"}
+
 **Is there a relationship between personality and movie preferences?**
 
 ```{r, echo = FALSE,comment = '', warning = FALSE}
@@ -286,6 +288,7 @@ table(chi_results$`What's the best movie genre?`, chi_results$`Are you a...`)
 table <- table(chi_results$`What's the best movie genre?`, chi_results$`Are you a...`)
 print(chisq.test(table))
 ```
+
 :::
 
 ------------------------------------------------------------------------
@@ -298,3 +301,4 @@ print(chisq.test(table))
 -   Statistical significance does not necessarily mean real-world significance
 
 ------------------------------------------------------------------------
+:::
